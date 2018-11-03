@@ -3,11 +3,16 @@ package com.tuanfadbg.snackalert;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
+import android.os.Handler;
 import android.util.DisplayMetrics;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
@@ -16,6 +21,7 @@ import android.view.animation.TranslateAnimation;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 /**
  * Created by Tuan FADBG.
@@ -28,6 +34,7 @@ public class SnackAlert extends Dialog {
     public static final int NORMAL = 4;
     private static final float MIN_DISTANCE = 50;
     Context context;
+    private float backgroundAlpha = (float) 0.8;
     private String title;
     private String message;
     private int duration = 2000;
@@ -41,16 +48,18 @@ public class SnackAlert extends Dialog {
     private boolean isSwipeToDimiss;
     private Drawable imageDrawable;
     private int titleColor, messageColor, backgroundColor;
-
+    private boolean autoHide = true;
     private Interpolator interpolatorShow, interpolatorHide, interpolatorSwipeToDimiss;
-    float x1, x2;
-    int width;
+    private float x1, x2, y1, y2;
+    private int width, height;
+    private OnAlertClickListener onAlertClickListener;
+    private boolean backPressToDismiss = false;
+
 
     public SnackAlert(Context context) {
         super(context, android.R.style.Theme_Translucent_NoTitleBar);
         this.context = context;
         setContentView(R.layout.layout_alert);
-
         init();
     }
 
@@ -63,16 +72,45 @@ public class SnackAlert extends Dialog {
         this.duration = duration;
         this.type = type;
         setContentView(R.layout.layout_alert);
-
         init();
+
     }
 
     private void init() {
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        Window window = this.getWindow();
+        WindowManager.LayoutParams wlp = window.getAttributes();
+
+        wlp.gravity = Gravity.TOP;
+        window.setAttributes(wlp);
+//        getWindow().getAttributes().flags
+        int flag = ((Activity) context).getWindow().getAttributes().flags;
+        window.setFlags(flag, flag);
+        window.setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL);
         txtMessage = findViewById(R.id.message);
         txtTitle = findViewById(R.id.title);
         rlMain = findViewById(R.id.rl_main);
         image = findViewById(R.id.image);
+
+        float dip = 80;
+        Resources r = context.getResources();
+        height = (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                dip,
+                r.getDisplayMetrics()
+        );
+
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+
+        if (event.getAction() == MotionEvent.ACTION_OUTSIDE) {
+            Toast.makeText(context, "out", Toast.LENGTH_SHORT).show();
+            this.dismiss();
+        }
+        ((Activity) context).dispatchTouchEvent(event);
+        return false;
     }
 
     public SnackAlert setImageDrawable(Drawable imageDrawable) {
@@ -146,33 +184,43 @@ public class SnackAlert extends Dialog {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                         x1 = event.getX();
+                        y1 = event.getY();
                         return true;
                     case MotionEvent.ACTION_MOVE:
                         x2 = event.getX();
-                        if (x1 - x2 > MIN_DISTANCE) {
-                            dismissRightToLeft();
-                            return false;
-                        } else if (x2 - x1 > MIN_DISTANCE) {
-                            dismissLeftToRight();
-                            return false;
-                        }
-                        return true;
+                        y2 = event.getY();
+                        return checkToDimiss();
                     case MotionEvent.ACTION_UP:
                         x2 = event.getX();
-                        if (x1 - x2 > MIN_DISTANCE) {
-                            dismissRightToLeft();
-                            return false;
-                        } else if (x2 - x1 > MIN_DISTANCE) {
-                            dismissLeftToRight();
-                            return false;
-                        }
-                        return true;
+                        y2 = event.getY();
+                        return checkToDimiss();
                 }
                 return true;
             });
         }
         return this;
     }
+
+    private boolean checkToDimiss() {
+        if (x1 - x2 > MIN_DISTANCE) {
+            dismissRightToLeft();
+            return false;
+        } else if (x2 - x1 > MIN_DISTANCE) {
+            dismissLeftToRight();
+            return false;
+        }
+        if (y1 - y2 > MIN_DISTANCE) {
+            dismissToTop();
+        }
+        return true;
+    }
+
+    private void dismissToTop() {
+        rlMain.startAnimation(createAnimationClose());
+        new Handler().postDelayed(() -> SnackAlert.this.dismiss(), durationAnimationHide);
+
+    }
+
 
     public SnackAlert setDurationSwipeToDimiss(int durationSwipeToDimiss) {
         this.durationSwipeToDimiss = durationSwipeToDimiss;
@@ -181,6 +229,16 @@ public class SnackAlert extends Dialog {
 
     public SnackAlert setInterpolatorSwipeToDimiss(Interpolator interpolatorSwipeToDimiss) {
         this.interpolatorSwipeToDimiss = interpolatorSwipeToDimiss;
+        return this;
+    }
+
+    public SnackAlert setBackgroundAlpha(float backgroundAlpha) {
+        this.backgroundAlpha = backgroundAlpha;
+        return this;
+    }
+
+    public SnackAlert setAutoHide(boolean autoHide) {
+        this.autoHide = autoHide;
         return this;
     }
 
@@ -210,28 +268,32 @@ public class SnackAlert extends Dialog {
 
     @Override
     public void show() {
+
         if (backgroundColor == 0) {
             switch (type) {
                 case SUCCESS: {
-                    rlMain.setBackgroundColor(Color.parseColor("#D91f933a"));
+                    rlMain.setBackgroundColor(Color.parseColor("#1f933a"));
                     break;
                 }
                 case WARNING: {
-                    rlMain.setBackgroundColor(Color.parseColor("#D99F6000"));
+                    rlMain.setBackgroundColor(Color.parseColor("#9F6000"));
                     break;
                 }
                 case ERROR: {
-                    rlMain.setBackgroundColor(Color.parseColor("#D9da251f"));
+                    rlMain.setBackgroundColor(Color.parseColor("#da251f"));
                     break;
                 }
                 case NORMAL: {
-                    rlMain.setBackgroundColor(Color.parseColor("#D9ffbc40"));
+                    rlMain.setBackgroundColor(Color.parseColor("#ffbc40"));
                     break;
                 }
             }
         } else {
             rlMain.setBackgroundColor(backgroundColor);
         }
+
+        rlMain.setAlpha(backgroundAlpha);
+
         if (title == null) {
             switch (type) {
                 case SUCCESS: {
@@ -266,25 +328,50 @@ public class SnackAlert extends Dialog {
             image.setImageDrawable(imageDrawable);
         } else image.setVisibility(View.GONE);
 
-        Animation animationShow = new TranslateAnimation(0, 0, -80, 0);
+        Animation animationShow = createAnimationShow();
+
+        Animation animationClose = createAnimationClose();
+
+        rlMain.startAnimation(animationShow);
+        if (autoHide) {
+            android.os.Handler handler = new android.os.Handler();
+            handler.postDelayed(() -> rlMain.startAnimation(animationClose), duration + durationAnimationShow);
+            handler.postDelayed(() -> SnackAlert.this.dismiss(), duration + durationAnimationShow + durationAnimationHide);
+        }
+        setCanceledOnTouchOutside(true);
+        super.show();
+    }
+
+    private Animation createAnimationShow() {
+        Animation animationShow = new TranslateAnimation(0, 0, -height, 0);
         animationShow.setDuration(durationAnimationShow);
         if (interpolatorShow != null)
             animationShow.setInterpolator(interpolatorShow);
         animationShow.setFillAfter(true);
+        return animationShow;
+    }
 
-        Animation animationClose = new TranslateAnimation(0, 0, 0, -80);
+    private Animation createAnimationClose() {
+        Animation animationClose = new TranslateAnimation(0, 0, 0, -height);
         animationClose.setDuration(durationAnimationHide);
         animationClose.setFillAfter(true);
         if (interpolatorHide != null)
             animationClose.setInterpolator(interpolatorHide);
+        return animationClose;
+    }
 
+    public SnackAlert setOnAlertClickListener(OnAlertClickListener onAlertClickListener) {
+        this.onAlertClickListener = onAlertClickListener;
+        rlMain.setOnClickListener(v -> onAlertClickListener.onClick());
+        return this;
+    }
 
-        rlMain.startAnimation(animationShow);
-        android.os.Handler handler = new android.os.Handler();
-        handler.postDelayed(() -> rlMain.startAnimation(animationClose), duration + durationAnimationShow);
-        handler.postDelayed(() -> SnackAlert.this.dismiss(), duration + durationAnimationShow + durationAnimationHide);
-        super.show();
+    @Override
+    public void onBackPressed() {
+        if (backPressToDismiss)
+            super.onBackPressed();
     }
 }
+
 
 
