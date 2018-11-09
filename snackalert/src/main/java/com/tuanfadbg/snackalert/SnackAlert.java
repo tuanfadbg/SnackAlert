@@ -315,8 +315,8 @@ public class SnackAlert extends Dialog {
             }
         } else
             txtTitle.setText(title);
-        txtMessage.setText(message);
-
+        if (message != null)
+            txtMessage.setText(message);
         if (titleColor != 0) {
             txtTitle.setTextColor(titleColor);
         }
