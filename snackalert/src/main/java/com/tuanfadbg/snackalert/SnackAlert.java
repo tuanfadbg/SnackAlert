@@ -42,7 +42,8 @@ public class SnackAlert extends Dialog {
     private int durationAnimationHide = 100;
     private int durationSwipeToDimiss = 500;
     private RelativeLayout rlMain;
-    private TextView txtTitle, txtMessage;
+    private TextView txtTitle;
+    private TextView txtMessage;
     private ImageView image;
     private int type = SUCCESS;
     private boolean isSwipeToDimiss;
@@ -87,8 +88,8 @@ public class SnackAlert extends Dialog {
         window.setFlags(flag, flag);
         window.setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL);
-        txtMessage = findViewById(R.id.message);
-        txtTitle = findViewById(R.id.title);
+        txtMessage = findViewById(R.id.fa_message);
+        txtTitle = findViewById(R.id.fa_title);
         rlMain = findViewById(R.id.rl_main);
         image = findViewById(R.id.image);
 
@@ -315,7 +316,7 @@ public class SnackAlert extends Dialog {
             }
         } else
             txtTitle.setText(title);
-        if (message != null)
+        if (message != null && txtMessage != null)
             txtMessage.setText(message);
         if (titleColor != 0) {
             txtTitle.setTextColor(titleColor);
