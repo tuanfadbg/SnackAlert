@@ -88,8 +88,8 @@ public class SnackAlert extends Dialog {
         window.setFlags(flag, flag);
         window.setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL);
-        txtMessage = findViewById(R.id.fa_message);
-        txtTitle = findViewById(R.id.fa_title);
+        txtMessage = findViewById(R.id.message);
+        txtTitle = findViewById(R.id.title);
         rlMain = findViewById(R.id.rl_main);
         image = findViewById(R.id.image);
 
