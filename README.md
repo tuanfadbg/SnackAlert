@@ -24,7 +24,7 @@ allprojects {
 ```
 dependencies {
   ...
-  implementation 'com.github.tuanfadbg:SnackAlert:1.3.13'
+  implementation 'com.github.tuanfadbg:SnackAlert:1.5.13'
 }
 ```
 
